@@ -56,7 +56,7 @@ class Phase(ABC):
             assistant_role_prompt: str,
             user_role_prompt: str,
             task_type=TaskType.CHATDEV,
-            need_reflect=False,
+            need_reflect=True,
             with_task_specify=False,
             model_type=ModelType.GPT_3_5_TURBO,
             memory=None,
@@ -115,6 +115,8 @@ class Phase(ABC):
         _, input_user_msg = role_play_session.init_chat(None, placeholders, phase_prompt)
         seminar_conclusion = None
 
+        log_visualize(f"**[Debugging] {input_user_msg} and {placeholders}.**")
+
         # handle chats
         # the purpose of the chatting in one phase is to get a seminar conclusion
         # there are two types of conclusion
@@ -162,25 +164,52 @@ class Phase(ABC):
             else:
                 break
 
-        # conduct self reflection
-        if need_reflect:
-            if seminar_conclusion in [None, ""]:
-                seminar_conclusion = "<INFO> " + self.self_reflection(task_prompt, role_play_session, phase_name,
-                                                                      chat_env)
-            if "recruiting" in phase_name:
-                if "Yes".lower() not in seminar_conclusion.lower() and "No".lower() not in seminar_conclusion.lower():
-                    seminar_conclusion = "<INFO> " + self.self_reflection(task_prompt, role_play_session,
-                                                                          phase_name,
-                                                                          chat_env)
-            elif seminar_conclusion in [None, ""]:
-                seminar_conclusion = "<INFO> " + self.self_reflection(task_prompt, role_play_session, phase_name,
-                                                                      chat_env)
-        else:
+        if need_reflect: 
+            if seminar_conclusion in [None, ""]: 
+                seminar_conclusion = self.retrieve_human_feedback(phase_name, seminar_conclusion)
+            else: 
+                seminar_conclusion = self.retrieve_human_feedback(phase_name, seminar_conclusion)
+        else: 
             seminar_conclusion = assistant_response.msg.content
 
         log_visualize("**[Seminar Conclusion]**:\n\n {}".format(seminar_conclusion))
-        seminar_conclusion = seminar_conclusion.split("<INFO>")[-1]
+        # seminar_conclusion = seminar_conclusion.split("<INFO>")[-1]
         return seminar_conclusion
+    
+    def retrieve_human_feedback(self, 
+                                phase_name: str,
+                                seminar_conclusion: str) -> None:
+        """
+
+        Args: 
+            phase_name: name of the chat phase which needs reflection
+            seminar_conclusion: the conclusion of the given phase
+
+        Returns: 
+            A user-provided seminar_conclusion
+
+        """
+        log_visualize(
+            f"**[Human-Agent-Interaction]**\n\n"
+            f"Please provide feedback on the conclusion of the {phase_name} phase.\n"
+            f"{seminar_conclusion}"
+        )
+
+        provided_comments = []
+        while True:
+            user_input = input(">>>>>>")
+            if user_input.strip().lower() == "end":
+                break
+            if user_input.strip().lower() == "exit":
+                provided_comments = ["exit"]
+                break
+            provided_comments.append(user_input)
+        
+        log_visualize(
+            f"**[User Provided Comments]**\n\n comments: \n\n" +
+            '\n'.join(provided_comments))
+        
+        return '\n'.join(provided_comments)
 
     def self_reflection(self,
                         task_prompt: str,
@@ -215,7 +244,7 @@ class Phase(ABC):
             question = """According to the codes and file format listed above, write a requirements.txt file to specify the dependencies or packages required for the project to run properly." """
         else:
             raise ValueError(f"Reflection of phase {phase_name}: Not Assigned.")
-
+    
         # Reflections actually is a special phase between CEO and counselor
         # They read the whole chatting history of this phase and give refined conclusion of this phase
         reflected_content = \
@@ -228,11 +257,11 @@ class Phase(ABC):
                           assistant_role_prompt=self.ceo_prompt,
                           user_role_prompt=self.counselor_prompt,
                           placeholders={"conversations": messages, "question": question},
-                          need_reflect=False,
+                          need_reflect=False, # Keep False; We do not to reflect on the reflection. 
                           memory=chat_env.memory,
                           chat_turn_limit=1,
                           model_type=self.model_type)
-
+        
         if "recruiting" in phase_name:
             if "Yes".lower() in reflected_content.lower():
                 return "Yes"
@@ -318,7 +347,7 @@ class DemandAnalysis(Phase):
 
     def update_chat_env(self, chat_env) -> ChatEnv:
         if len(self.seminar_conclusion) > 0:
-            chat_env.env_dict['modality'] = self.seminar_conclusion.split("<INFO>")[-1].lower().replace(".", "").strip()
+            chat_env.env_dict['modality'] = self.seminar_conclusion.lower().replace(".", "").strip()
         return chat_env
 
 
@@ -525,11 +554,11 @@ class CodeReviewHuman(Phase):
             self.chatting(chat_env=chat_env,
                           task_prompt=chat_env.env_dict['task_prompt'],
                           need_reflect=need_reflect,
-                          assistant_role_name=self.assistant_role_name,
-                          user_role_name=self.user_role_name,
+                          assistant_role_name=self.assistant_role_name, # Programmer
+                          user_role_name=self.user_role_name,           # Code Reviewer
                           phase_prompt=self.phase_prompt,
                           phase_name=self.phase_name,
-                          assistant_role_prompt=self.assistant_role_prompt,
+                          assistant_role_prompt=self.assistant_role_prompt, 
                           user_role_prompt=self.user_role_prompt,
                           chat_turn_limit=chat_turn_limit,
                           placeholders=self.phase_env,

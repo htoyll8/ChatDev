@@ -10,13 +10,13 @@
       "phase": "LanguageChoose",
       "phaseType": "SimplePhase",
       "max_turn_step": -1,
-      "need_reflect": "False"
+      "need_reflect": "True"
     },
     {
       "phase": "Coding",
       "phaseType": "SimplePhase",
       "max_turn_step": 1,
-      "need_reflect": "False"
+      "need_reflect": "True"
     },
     {
       "phase": "Art",
@@ -46,7 +46,7 @@
           "phase": "CodeComplete",
           "phaseType": "SimplePhase",
           "max_turn_step": 1,
-          "need_reflect": "False"
+          "need_reflect": "True"
         }
       ]
     },
@@ -59,13 +59,13 @@
           "phase": "CodeReviewComment",
           "phaseType": "SimplePhase",
           "max_turn_step": 1,
-          "need_reflect": "False"
+          "need_reflect": "True"
         },
         {
           "phase": "CodeReviewModification",
           "phaseType": "SimplePhase",
           "max_turn_step": 1,
-          "need_reflect": "False"
+          "need_reflect": "True"
         }
       ]
     },
@@ -78,13 +78,13 @@
           "phase": "TestErrorSummary",
           "phaseType": "SimplePhase",
           "max_turn_step": 1,
-          "need_reflect": "False"
+          "need_reflect": "True"
         },
         {
           "phase": "TestModification",
           "phaseType": "SimplePhase",
           "max_turn_step": 1,
-          "need_reflect": "False"
+          "need_reflect": "True"
         }
       ]
     },
@@ -98,7 +98,7 @@
       "phase": "Manual",
       "phaseType": "SimplePhase",
       "max_turn_step": 1,
-      "need_reflect": "False"
+      "need_reflect": "True"
     }
   ],
   "recruitments": [

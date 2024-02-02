@@ -165,6 +165,7 @@ class ChatChain:
 
         """
         for phase_item in self.chain:
+            log_visualize(f"**[Phase Item]**\n\n phase item: {phase_item} \n\n")
             self.execute_step(phase_item)
 
     def get_logfilepath(self):
