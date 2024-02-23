@@ -1,0 +1,29 @@
+{
+  "RequirementGraphGeneration": {
+    "roles": ["Requirement Analyst"], 
+    "phase_prompt": [
+      "Generate an ontology based on the following user-provided specification: ",
+      "Task: \"{task}\".",
+      "Make sure to focus on what's ambiguous",
+      "Note that you must only generate the ontology and do not generate anything else! Once you have generated the ontology, return the ontology in the following format:...."
+    ]
+  },
+  "RequirementClarification": {
+    "roles": ["Requirement Analyst"], 
+    "phase_prompt": [
+      "Generate the  clarifying questions about the user-provided specification based on the following ontology: ",
+      "Ontology: \"{ontology}\".",
+      "Here's the original user-provided task prompt for your memory: ", 
+      "Task: \"{task}\".",
+      "Note that you must only generate clarifying questions based on the provided ontology and do not generate anything else! Once you have generated the clarifying questions, return the clarifying questions in the following format:...."
+    ]
+  },
+  "RequirementSpecificationGeneration": {
+    "roles": ["Requirement Analyst"], 
+    "phase_prompt": [
+      "Generate a software requirement specification by enumerating all of the following requirements into one document: ",
+      "Requirements: \"{sys_requirements}\".",
+      "Note that you must only generate a software requirement specification by enumerating all of the provided specifications do not generate anything else or use any other methods to generate software requirement specification! Once you have generated the software requirements specification, return the software requirements specification in the following format:...."
+    ]
+  }
+}

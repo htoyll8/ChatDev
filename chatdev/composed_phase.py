@@ -174,7 +174,7 @@ class Art(ComposedPhase):
 
     def break_cycle(self, chat_env) -> bool:
         return False
-
+    
 
 class CodeCompleteAll(ComposedPhase):
     def __init__(self, **kwargs):

@@ -58,6 +58,7 @@ class ChatEnv:
         self.proposed_images: Dict[str, str] = {}
         self.incorporated_images: Dict[str, str] = {}
         self.requirements: Documents = Documents()
+        self.software_specification: Documents = Documents()
         self.manuals: Documents = Documents()
         self.env_dict = {
             "directory": "",

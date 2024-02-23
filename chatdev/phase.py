@@ -13,8 +13,7 @@ from chatdev.utils import log_visualize, log_arguments
 class Phase(ABC):
 
     def __init__(self,
-                 assistant_role_name,
-                 user_role_name,
+                 roles,
                  phase_prompt,
                  role_prompts,
                  phase_name,
@@ -30,15 +29,11 @@ class Phase(ABC):
             phase_name: name of this phase
         """
         self.seminar_conclusion = None
-        self.assistant_role_name = assistant_role_name
-        self.user_role_name = user_role_name
+        self.roles = roles
+        self.role_prompts = role_prompts
         self.phase_prompt = phase_prompt
         self.phase_env = dict()
         self.phase_name = phase_name
-        self.assistant_role_prompt = role_prompts[assistant_role_name]
-        self.user_role_prompt = role_prompts[user_role_name]
-        self.ceo_prompt = role_prompts["Chief Executive Officer"]
-        self.counselor_prompt = role_prompts["Counselor"]
         self.max_retries = 3
         self.reflection_prompt = """Here is a conversation between two roles: {conversations} {question}"""
         self.model_type = model_type
@@ -49,12 +44,8 @@ class Phase(ABC):
             self,
             chat_env,
             task_prompt: str,
-            assistant_role_name: str,
-            user_role_name: str,
             phase_prompt: str,
             phase_name: str,
-            assistant_role_prompt: str,
-            user_role_prompt: str,
             task_type=TaskType.CHATDEV,
             need_reflect=True,
             with_task_specify=False,
@@ -89,17 +80,14 @@ class Phase(ABC):
             placeholders = {}
         assert 1 <= chat_turn_limit <= 100
 
-        if not chat_env.exist_employee(assistant_role_name):
-            raise ValueError(f"{assistant_role_name} not recruited in ChatEnv.")
-        if not chat_env.exist_employee(user_role_name):
-            raise ValueError(f"{user_role_name} not recruited in ChatEnv.")
-
+        # Check that each of the user-provided roles exists in the ChatChain environment.
+        for role in self.roles: 
+            if not chat_env.exist_employee(role):
+                raise ValueError(f"{role} not recruited in ChatEnv.")
+            
         # init role play
         role_play_session = RolePlaying(
-            assistant_role_name=assistant_role_name,
-            user_role_name=user_role_name,
-            assistant_role_prompt=assistant_role_prompt,
-            user_role_prompt=user_role_prompt,
+            roles=self.roles,
             task_prompt=task_prompt,
             task_type=task_type,
             with_task_specify=with_task_specify,
@@ -132,35 +120,11 @@ class Phase(ABC):
             # 4. then input_assistant_msg send to LLM and get user_response
             # all above are done in role_play_session.step, which contains two interactions with LLM
             # the first interaction is logged in role_play_session.init_chat
-            assistant_response, user_response = role_play_session.step(input_user_msg, chat_turn_limit == 1)
-
-            conversation_meta = "**" + assistant_role_name + "<->" + user_role_name + " on : " + str(
-                phase_name) + ", turn " + str(i) + "**\n\n"
-
-            # TODO: max_tokens_exceeded errors here
-            if isinstance(assistant_response.msg, ChatMessage):
-                # we log the second interaction here
-                log_visualize(role_play_session.assistant_agent.role_name,
-                              conversation_meta + "[" + role_play_session.user_agent.system_message.content + "]\n\n" + assistant_response.msg.content)
-                if role_play_session.assistant_agent.info:
-                    seminar_conclusion = assistant_response.msg.content
-                    break
-                if assistant_response.terminated:
-                    break
-
-            if isinstance(user_response.msg, ChatMessage):
-                # here is the result of the second interaction, which may be used to start the next chat turn
-                log_visualize(role_play_session.user_agent.role_name,
-                              conversation_meta + "[" + role_play_session.assistant_agent.system_message.content + "]\n\n" + user_response.msg.content)
-                if role_play_session.user_agent.info:
-                    seminar_conclusion = user_response.msg.content
-                    break
-                if user_response.terminated:
-                    break
+            role_response = role_play_session.step(input_role_msg, chat_turn_limit == 1)
 
             # continue the chat
-            if chat_turn_limit > 1 and isinstance(user_response.msg, ChatMessage):
-                input_user_msg = user_response.msg
+            if chat_turn_limit > 1:
+                input_role_msg = role_response
             else:
                 break
 
@@ -660,7 +624,7 @@ class EnvironmentDoc(Phase):
         log_visualize(
             "**[Software Info]**:\n\n {}".format(get_info(chat_env.env_dict['directory'], self.log_filepath)))
         return chat_env
-
+    
 
 class Manual(Phase):
     def __init__(self, **kwargs):
@@ -677,4 +641,37 @@ class Manual(Phase):
     def update_chat_env(self, chat_env) -> ChatEnv:
         chat_env._update_manuals(self.seminar_conclusion)
         chat_env.rewrite_manuals()
+        return chat_env
+
+
+class RequirementGraphGeneration(Phase):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def update_phase_env(self, chat_env):
+        self.phase_env.update({
+            "task": chat_env.env_dict["task_prompt"]
+        })
+    
+    def update_chat_env(self, chat_env) -> ChatEnv:
+        chat_env._update_requirement_ontology(self.seminar_conclusion)
+        chat_env.rewrite_requirement_ontology()
+        return chat_env
+
+
+class RequirementSpecificationGeneration(Phase):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def update_phase_env(self, chat_env):
+        self.phase_env.update({
+            "task": chat_env.env_dict['task_prompt'],
+            "sys_requirements": chat_env.env_dict['sys_requirements'],
+            "specification": chat_env.get_specification()
+        })
+    
+    def update_chat_env(self, chat_env) -> ChatEnv:
+        # chat_env._update_specification(self.seminar_conclusion)
+        # chat_env.rewrite_specification()
+        # TODO: Merge the requirements manually. 
         return chat_env
